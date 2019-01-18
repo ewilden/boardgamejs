@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, StyleSheet, Image, processColor } from 'react-native';
+import { Text, View, StyleSheet, Image, processColor, ImageSourcePropType } from 'react-native';
 
 const getColor = (rank: number, file: number) => {
     return Math.abs(rank - file) % 2 !== 0 ? 'red' : 'pink';
@@ -11,16 +11,16 @@ interface Props {
     spec: BoardSpec;
 }
 
-type PieceAssignment = (row: number, col: number) => (React.ReactNode | undefined);
+interface PieceSprite {
+    node?: React.ReactNode;
+    uri?: string;
+    src?: ImageSourcePropType;
+}
+
+type PieceAssignment = (row: number, col: number) => (PieceSprite | undefined);
 
 export interface SquareSpec {
     backgroundColor: string;
-}
-
-export interface PieceSpec {
-    row: number;
-    col: number;
-    imgSrc: string;
 }
 
 export interface BoardSpec {
@@ -41,7 +41,7 @@ export function getChessBoardSpec(): BoardSpec {
     }
 
     const renderPiece = (pieceCode: string) => {
-        return <Image source={{ uri: `/images/chess-pieces/${pieceCode}.png` }} style={{ width: 40, height: 40 }} />;
+        return { uri: `/images/chess-pieces/${pieceCode}.png` }
     }
 
     const whitePieces = (r: number, c: number) => {
@@ -103,10 +103,24 @@ class Board extends React.Component<Props> {
         const { squares, pieces } = spec;
         const boardSize = Math.min(width, height);
         const squareSize = boardSize / squares.length;
+
+        const renderPieceSprite = (spr: PieceSprite): (React.ReactNode | void) => {
+            if (spr.node) {
+                return spr.node;
+            }
+            if (spr.uri) {
+                return <Image source={{ uri: spr.uri }} style={{ width: 0.9 * squareSize, height: 0.9 * squareSize }} />
+            }
+        }
         return squares.map((row, rowNum) => {
             return <View style={styles.row}>{row.map((square, colNum) => {
-                return <View style={{ width: squareSize, height: squareSize, backgroundColor: square.backgroundColor }}>
-                    {pieces && pieces.map(fn => fn(rowNum, colNum))}
+                return <View style={[{ width: squareSize, height: squareSize, backgroundColor: square.backgroundColor }, { alignItems: 'center' }]}>
+                    {pieces && pieces.map(fn => {
+                        const spr = fn(rowNum, colNum);
+                        if (spr) {
+                            return renderPieceSprite(spr);
+                        }
+                    })}
                 </View>;
             })}</View>;
         });
