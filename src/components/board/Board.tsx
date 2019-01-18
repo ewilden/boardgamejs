@@ -1,23 +1,31 @@
 import React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, Image, processColor } from 'react-native';
 
 const getColor = (rank: number, file: number) => {
     return Math.abs(rank - file) % 2 !== 0 ? 'red' : 'pink';
 }
 
 interface Props {
-    width: number,
-    height: number,
-    spec: BoardSpec,
+    width: number;
+    height: number;
+    spec: BoardSpec;
 }
 
+type PieceAssignment = (row: number, col: number) => (React.ReactNode | undefined);
+
 export interface SquareSpec {
-    backgroundColor: string,
-    pieceImageSrc?: string,
+    backgroundColor: string;
+}
+
+export interface PieceSpec {
+    row: number;
+    col: number;
+    imgSrc: string;
 }
 
 export interface BoardSpec {
-    squares: SquareSpec[][],
+    squares: SquareSpec[][];
+    pieces?: PieceAssignment[];
 }
 
 export function getChessBoardSpec(): BoardSpec {
@@ -31,18 +39,75 @@ export function getChessBoardSpec(): BoardSpec {
         }
         squares.push(row);
     }
-    return { squares };
+
+    const renderPiece = (pieceCode: string) => {
+        return <Image source={{ uri: `/images/chess-pieces/${pieceCode}.png` }} style={{ width: 40, height: 40 }} />;
+    }
+
+    const whitePieces = (r: number, c: number) => {
+        const rank = 8 - r;
+        const file = c + 1;
+        if (rank == 2) {
+            return renderPiece('wP');
+        }
+        if (rank == 1) {
+            if ([1, 8].includes(file)) {
+                return renderPiece('wR');
+            }
+            if ([2, 7].includes(file)) {
+                return renderPiece('wN');
+            }
+            if ([3, 6].includes(file)) {
+                return renderPiece('wB');
+            }
+            if (file == 4) {
+                return renderPiece('wQ');
+            }
+            if (file == 5) {
+                return renderPiece('wK');
+            }
+        }
+    }
+
+    const blackPieces = (r: number, c: number) => {
+        const rank = 8 - r;
+        const file = c + 1;
+        if (rank == 7) {
+            return renderPiece('bP');
+        }
+        if (rank == 8) {
+            if ([1, 8].includes(file)) {
+                return renderPiece('bR');
+            }
+            if ([2, 7].includes(file)) {
+                return renderPiece('bN');
+            }
+            if ([3, 6].includes(file)) {
+                return renderPiece('bB');
+            }
+            if (file == 4) {
+                return renderPiece('bQ');
+            }
+            if (file == 5) {
+                return renderPiece('bK');
+            }
+        }
+    }
+
+    return { squares, pieces: [whitePieces, blackPieces] };
 }
 
 class Board extends React.Component<Props> {
     renderSquares() {
         const { width, height, spec } = this.props;
-        const { squares } = spec;
+        const { squares, pieces } = spec;
         const boardSize = Math.min(width, height);
         const squareSize = boardSize / squares.length;
-        return squares.map(row => {
-            return <View style={styles.row}>{row.map(square => {
-                return <View style={{ width: squareSize, height: squareSize, backgroundColor: square.backgroundColor }}><Text>Hi</Text></View>;
+        return squares.map((row, rowNum) => {
+            return <View style={styles.row}>{row.map((square, colNum) => {
+                return <View style={{ width: squareSize, height: squareSize, backgroundColor: square.backgroundColor }}>
+                    {pieces && pieces.map(fn => fn(rowNum, colNum))}
+                </View>;
             })}</View>;
         });
     }
