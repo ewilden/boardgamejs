@@ -4,8 +4,7 @@ export interface ChessPieceData {
     color: "white" | "black";
     kind: "king" | "queen" | "rook" | "bishop" | "knight" | "pawn";
 }
-const ChessSpec: BoardSpec<ChessPieceData> = getChessBoardSpec();
-export default ChessSpec;
+export const getChessSpec: (() => BoardSpec<ChessPieceData>) = () => getChessBoardSpec();
 
 function getChessBoardSpec(): BoardSpec<ChessPieceData> {
     const getColor = (rank: number, file: number) => {

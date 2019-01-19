@@ -1,16 +1,18 @@
 import React, { Component } from "react";
 import {
-  Text,
   View
 } from "react-native";
-import Board from "./components/board/Board";
-import ChessSpec from "./game-specs/ChessSpec";
+import Board, { BoardSpec } from "./components/board/Board";
+import { getChessSpec, ChessPieceData } from "./game-specs/ChessSpec";
 import DimensionsAware from "./components/DimensionsAware";
+import ChessContainer from "./components/board/ChessContainer";
+
 
 class App extends Component<{}> {
+
   render() {
-    return <View><Text> Hello App! </Text>
-      <DimensionsAware render={({ windowDims }) => <Board {...windowDims} spec={ChessSpec} />} />
+    return <View>
+      <DimensionsAware render={({ windowDims }) => <ChessContainer {...windowDims} />} />
     </View>;
   }
 }

@@ -41,13 +41,19 @@ export class PieceAssignment<PieceData> {
     }
 }
 
+export function clonePieceAssignmentFrom<PieceData>(pa: PieceAssignment<PieceData>): PieceAssignment<PieceData> {
+    const nextPA = new PieceAssignment<PieceData>();
+    nextPA.mapping = new Map(pa.mapping);
+    return nextPA;
+}
+
 export interface SquareSpec {
     backgroundColor: string;
 }
 
 export interface BoardSpec<PieceData> {
     squares: SquareSpec[][];
-    pieces?: PieceAssignment<PieceData>;
+    pieces: PieceAssignment<PieceData>;
 }
 
 class Board<PieceData> extends React.Component<Props<PieceData>> {
@@ -70,7 +76,7 @@ class Board<PieceData> extends React.Component<Props<PieceData>> {
         }
         return squares.map((row, rowNum) => {
             return <View style={styles.row}>{row.map((square, colNum) => {
-                const piece = pieces && pieces.getPiece(rowNum, colNum);
+                const piece = pieces.getPiece(rowNum, colNum);
                 return <TouchableHighlight onPress={() => this.props.onClickSquare && this.props.onClickSquare(rowNum, colNum, spec)}>
                     <View style={[{ width: squareSize, height: squareSize, backgroundColor: square.backgroundColor }]}>
                         {piece && renderPieceSprite(piece.sprite)}
