@@ -1,127 +1,81 @@
 import React from 'react';
-import { Text, View, StyleSheet, Image, processColor, ImageSourcePropType } from 'react-native';
+import { View, StyleSheet, Image, ImageSourcePropType, TouchableHighlight } from 'react-native';
 
-const getColor = (rank: number, file: number) => {
-    return Math.abs(rank - file) % 2 !== 0 ? 'red' : 'pink';
-}
-
-interface Props {
+interface Props<PieceData> {
     width: number;
     height: number;
-    spec: BoardSpec;
+    spec: BoardSpec<PieceData>;
+    onClickSquare?: (row: number, col: number, spec: BoardSpec<PieceData>) => void
 }
 
-interface PieceSprite {
+export interface PieceSprite {
     node?: React.ReactNode;
     uri?: string;
     src?: ImageSourcePropType;
 }
 
-type PieceAssignment = (row: number, col: number) => (PieceSprite | undefined);
+export interface Piece<PieceData> {
+    sprite: PieceSprite;
+    data: PieceData;
+}
+
+export type CoordKey = string;
+
+export class PieceAssignment<PieceData> {
+    static coordsToKey = (row: number, col: number): CoordKey => {
+        return `${row},${col}`
+    }
+    static keyToCoords = (key: CoordKey): [number, number] => {
+        const [row, col] = key.split(',');
+        return [parseInt(row, 10), parseInt(col, 10)];
+    }
+    mapping: Map<String, (Piece<PieceData> | undefined)> = new Map();
+    putPiece(row: number, col: number, piece: Piece<PieceData>): void {
+        this.mapping.set(PieceAssignment.coordsToKey(row, col), piece);
+    }
+    removePiece(row: number, col: number): void {
+        this.mapping.delete(PieceAssignment.coordsToKey(row, col));
+    }
+    getPiece(row: number, col: number): Piece<PieceData> | undefined {
+        return this.mapping.get(PieceAssignment.coordsToKey(row, col));
+    }
+}
 
 export interface SquareSpec {
     backgroundColor: string;
 }
 
-export interface BoardSpec {
+export interface BoardSpec<PieceData> {
     squares: SquareSpec[][];
-    pieces?: PieceAssignment[];
+    pieces?: PieceAssignment<PieceData>;
 }
 
-export function getChessBoardSpec(): BoardSpec {
-    const squares = [];
-    for (let rank = 0; rank < 8; rank++) {
-        const row = [];
-        for (let file = 0; file < 8; file++) {
-            row.push({
-                backgroundColor: getColor(rank, file),
-            });
-        }
-        squares.push(row);
-    }
-
-    const renderPiece = (pieceCode: string) => {
-        return { uri: `/images/chess-pieces/${pieceCode}.png` }
-    }
-
-    const whitePieces = (r: number, c: number) => {
-        const rank = 8 - r;
-        const file = c + 1;
-        if (rank == 2) {
-            return renderPiece('wP');
-        }
-        if (rank == 1) {
-            if ([1, 8].includes(file)) {
-                return renderPiece('wR');
-            }
-            if ([2, 7].includes(file)) {
-                return renderPiece('wN');
-            }
-            if ([3, 6].includes(file)) {
-                return renderPiece('wB');
-            }
-            if (file == 4) {
-                return renderPiece('wQ');
-            }
-            if (file == 5) {
-                return renderPiece('wK');
-            }
-        }
-    }
-
-    const blackPieces = (r: number, c: number) => {
-        const rank = 8 - r;
-        const file = c + 1;
-        if (rank == 7) {
-            return renderPiece('bP');
-        }
-        if (rank == 8) {
-            if ([1, 8].includes(file)) {
-                return renderPiece('bR');
-            }
-            if ([2, 7].includes(file)) {
-                return renderPiece('bN');
-            }
-            if ([3, 6].includes(file)) {
-                return renderPiece('bB');
-            }
-            if (file == 4) {
-                return renderPiece('bQ');
-            }
-            if (file == 5) {
-                return renderPiece('bK');
-            }
-        }
-    }
-
-    return { squares, pieces: [whitePieces, blackPieces] };
-}
-
-class Board extends React.Component<Props> {
+class Board<PieceData> extends React.Component<Props<PieceData>> {
     renderSquares() {
         const { width, height, spec } = this.props;
         const { squares, pieces } = spec;
-        const boardSize = Math.min(width, height);
+        const boardSize = Math.min(width, height, 600);
         const squareSize = boardSize / squares.length;
 
-        const renderPieceSprite = (spr: PieceSprite): (React.ReactNode | void) => {
+        const renderPieceSprite = (spr: PieceSprite): (React.ReactNode | undefined) => {
             if (spr.node) {
                 return spr.node;
             }
+            if (spr.src) {
+                return <Image source={spr.src} style={{ width: 0.9 * squareSize, height: 0.9 * squareSize }} />;
+            }
             if (spr.uri) {
-                return <Image source={{ uri: spr.uri }} style={{ width: 0.9 * squareSize, height: 0.9 * squareSize }} />
+                return <Image source={{ uri: spr.uri }} style={{ width: 0.9 * squareSize, height: 0.9 * squareSize, margin: 0.05 * squareSize }} />
             }
         }
         return squares.map((row, rowNum) => {
             return <View style={styles.row}>{row.map((square, colNum) => {
-                return <View style={[{ width: squareSize, height: squareSize, backgroundColor: square.backgroundColor }, { alignItems: 'center' }]}>
-                    {pieces && pieces.map(fn => {
-                        const spr = fn(rowNum, colNum);
-                        if (spr) {
-                            return renderPieceSprite(spr);
-                        }
-                    })}
-                </View>;
+                const piece = pieces && pieces.getPiece(rowNum, colNum);
+                return <TouchableHighlight onPress={() => this.props.onClickSquare && this.props.onClickSquare(rowNum, colNum, spec)}>
+                    <View style={[{ width: squareSize, height: squareSize, backgroundColor: square.backgroundColor }]}>
+                        {piece && renderPieceSprite(piece.sprite)}
+                    </View>
+                </TouchableHighlight>;
             })}</View>;
         });
     }
